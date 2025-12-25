@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>工行科公文預警系統 V1.26</title>
+    <title>工行科公文預警系統 V1.28</title>
     <style>
         body { font-family: "Microsoft JhengHei", sans-serif; padding: 20px; background-color: #f4f4f9; }
         
@@ -100,14 +100,14 @@
 
         td:nth-child(3), td:nth-child(4), td:nth-child(6), td:nth-child(7), td:nth-child(8), td:nth-child(9) { text-align: center; }
 
-        /* 欄位寬度設定 */
+        /* V1.28 修正: 縮減剩餘天數寬度，加大主旨寬度 */
         th:nth-child(1) { width: 110px; } /* 操作 */
         th:nth-child(3) { width: 80px; }  /* 承辦人 */
         th:nth-child(4) { width: 160px; } /* 文號 */
-        th:nth-child(5) { width: 210px; } /* 主旨 */
+        th:nth-child(5) { width: 220px; } /* 主旨 (加大至 220px) */
         th:nth-child(6), th:nth-child(7) { width: 90px; } /* 日期 */
         th:nth-child(8) { width: 160px; } /* 結案日期 */
-        th:nth-child(9) { width: 70px; }  /* 剩餘天數 */
+        th:nth-child(9) { width: 80px; }  /* 剩餘天數 (縮減至 80px) */
 
         .edit-input { width: 100%; padding: 4px; box-sizing: border-box; border: 1px solid #007bff; border-radius: 4px; font-family: inherit; font-size: 0.95em; }
         .warn-yellow { background-color: #fff3cd !important; color: #856404; font-weight: bold; }
@@ -167,7 +167,7 @@
     <h3 id="openSectionTitle">📂 列管中公文（讀取中...）</h3>
     <table>
         <thead>
-            <tr><th>操作</th><th>狀態</th><th>承辦人</th><th>文號</th><th>主旨</th><th>收創日期</th><th>二展期限</th><th>結案日期</th><th>剩餘上班日</th></tr>
+            <tr><th>操作</th><th>狀態</th><th>承辦人</th><th>文號</th><th>主旨</th><th>收創日期</th><th>二展期限</th><th>結案日期</th><th>剩餘天數</th></tr>
         </thead>
         <tbody id="openDocList"></tbody>
     </table>
@@ -177,7 +177,7 @@
     <h3 id="closedSectionTitle" class="clickable-header" onclick="toggleClosedSection()" title="點擊展開/收合">🗄️ 已結案公文 ▶</h3>
     <table id="closedTable" style="display: none;">
         <thead>
-            <tr><th>操作</th><th>狀態</th><th>承辦人</th><th>文號</th><th>主旨</th><th>收創日期</th><th>二展期限</th><th>結案日期</th><th>剩餘上班日</th></tr>
+            <tr><th>操作</th><th>狀態</th><th>承辦人</th><th>文號</th><th>主旨</th><th>收創日期</th><th>二展期限</th><th>結案日期</th><th>剩餘天數</th></tr>
         </thead>
         <tbody id="closedDocList"></tbody>
     </table>
@@ -348,8 +348,6 @@
                 alert('所有欄位(包含承辦人)皆為必填。'); return;
             }
 
-            // V1.26 新增: 檢查文號是否重複
-            // 使用 String() 轉型確保數字文號也能正確比對
             const isDuplicate = allDocs.some(doc => String(doc.docNo) === String(docNo));
             if (isDuplicate) {
                 alert(`【錯誤】文號 ${docNo} 已存在！\n系統中已有此文號，請檢查是否重複錄案。`);
@@ -403,9 +401,6 @@
                 alert('所有欄位皆為必填。'); return;
             }
             
-            // 編輯模式通常不需要擋自己的文號，但若改成別的已存在文號則需警示
-            // 這裡簡單處理：允許修改，若改成重複的由人工判斷，或可加嚴檢查
-            // 若要加嚴：排除自己後，檢查是否重複
             const isDuplicate = allDocs.some(doc => String(doc.id) !== String(id) && String(doc.docNo) === String(docNo));
             if (isDuplicate) {
                  if(!confirm(`警示：文號 ${docNo} 已存在於其他案件中！\n確定要使用此文號嗎？`)) return;
