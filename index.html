@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>工行科公文預警系統 V1.21</title>
+    <title>工行科公文預警系統 V1.22</title>
     <style>
         body { font-family: "Microsoft JhengHei", sans-serif; padding: 20px; background-color: #f4f4f9; }
         
@@ -95,21 +95,16 @@
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; word-wrap: break-word; font-size: 0.95em; vertical-align: top; }
         th { background-color: #2c3e50; color: white; text-align: center; }
         
-        /* V1.21 重點修改: 
-           隱藏第2欄(狀態)，但保留DOM結構以維持後端相容性。
-           這會同時隱藏標題列(th)與資料列(td)的第2個元素。
-        */
+        /* 隱藏狀態欄位 (第2欄) */
         th:nth-child(2), td:nth-child(2) { display: none; }
 
-        /* 置中設定 (注意: 即使第2欄隱藏，CSS索引仍是基於原始結構) */
         td:nth-child(3), td:nth-child(4), td:nth-child(6), td:nth-child(7), td:nth-child(8), td:nth-child(9) { text-align: center; }
 
-        /* V1.21 修改: 欄位寬度重新分配 */
+        /* 欄位寬度設定 */
         th:nth-child(1) { width: 110px; } /* 操作 */
-        /* th:nth-child(2) 已隱藏 */
         th:nth-child(3) { width: 80px; }  /* 承辦人 */
-        th:nth-child(4) { width: 160px; } /* 文號 (加大至160px，容納14碼) */
-        th:nth-child(5) { width: 210px; } /* 主旨 (加大至210px，利用隱藏欄位的空間) */
+        th:nth-child(4) { width: 160px; } /* 文號 */
+        th:nth-child(5) { width: 210px; } /* 主旨 */
         th:nth-child(6), th:nth-child(7) { width: 90px; } /* 日期 */
         th:nth-child(8) { width: 160px; } /* 結案日期 */
         th:nth-child(9) { width: 70px; }  /* 剩餘天數 */
@@ -595,9 +590,16 @@
             return `${y+1911}-${m}-${d}`;
         }
 
+        // V1.22 修正: 增加防呆機制，避免非字串型別導致錯誤
         function displayROC(isoStr) {
             if (!isoStr) return '';
-            const date = new Date(isoStr.substring(0,10));
+            
+            // 強制轉型為字串，解決 .substring is not a function 錯誤
+            let dateStr = String(isoStr);
+            
+            // 嘗試解析日期
+            const date = new Date(dateStr.substring(0,10));
+            
             if (isNaN(date.getTime())) return '';
             return `${date.getFullYear()-1911}/${(date.getMonth()+1).toString().padStart(2,'0')}/${date.getDate().toString().padStart(2,'0')}`;
         }
