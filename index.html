@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>工行科公文預警系統</title>
+    <title>工行科公文預警系統 V1.19</title>
     <style>
         body { font-family: "Microsoft JhengHei", sans-serif; padding: 20px; background-color: #f4f4f9; }
         
@@ -100,16 +100,21 @@
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; word-wrap: break-word; font-size: 0.95em; vertical-align: top; }
         th { background-color: #2c3e50; color: white; text-align: center; }
         
-        /* 重點功能 1: 將結案日期(第7欄)加入置中列表 */
-        td:nth-child(2), td:nth-child(3), td:nth-child(5), td:nth-child(6), td:nth-child(7), td:nth-child(8) { text-align: center; }
+        /* V1.19 修改: 重新調整置中欄位索引
+           新增了第3欄(承辦人)，所以原來的 3,5,6,7,8 順延 
+           現在置中: 2(狀態), 3(承辦人), 4(文號), 6(收創), 7(二展), 8(結案), 9(天數)
+        */
+        td:nth-child(2), td:nth-child(3), td:nth-child(4), td:nth-child(6), td:nth-child(7), td:nth-child(8), td:nth-child(9) { text-align: center; }
 
-        th:nth-child(1) { width: 110px; } 
-        th:nth-child(2) { width: 70px; } 
-        th:nth-child(3) { width: 100px; }
-        th:nth-child(4) { width: 210px; } 
-        th:nth-child(5), th:nth-child(6) { width: 90px; }
-        th:nth-child(7) { width: 160px; } 
-        th:nth-child(8) { width: 80px; } 
+        /* V1.19 修改: 重新分配寬度以容納承辦人欄位 */
+        th:nth-child(1) { width: 110px; } /* 操作 */
+        th:nth-child(2) { width: 70px; }  /* 狀態 */
+        th:nth-child(3) { width: 80px; }  /* 承辦人 (New) */
+        th:nth-child(4) { width: 100px; } /* 文號 */
+        th:nth-child(5) { width: 190px; } /* 主旨 (原210 -> 190) */
+        th:nth-child(6), th:nth-child(7) { width: 90px; } /* 日期 */
+        th:nth-child(8) { width: 160px; } /* 結案日期 */
+        th:nth-child(9) { width: 70px; }  /* 剩餘天數 (原80 -> 70) */
 
         .edit-input { width: 100%; padding: 4px; box-sizing: border-box; border: 1px solid #007bff; border-radius: 4px; font-family: inherit; font-size: 0.95em; }
         .warn-yellow { background-color: #fff3cd !important; color: #856404; font-weight: bold; }
@@ -143,6 +148,10 @@
 
     <div class="input-group">
         <div class="input-item">
+            <label>承辦人</label>
+            <input type="text" id="undertaker" placeholder="姓名" style="width: 80px;">
+        </div>
+        <div class="input-item">
             <label>文號</label>
             <input type="text" id="docNo" placeholder="例:1140001234">
         </div>
@@ -165,7 +174,7 @@
     <h3 id="openSectionTitle">📂 列管中公文（讀取中...）</h3>
     <table>
         <thead>
-            <tr><th>操作</th><th>狀態</th><th>文號</th><th>主旨</th><th>收創日期</th><th>二展期限</th><th>結案日期</th><th>剩餘天數</th></tr>
+            <tr><th>操作</th><th>狀態</th><th>承辦人</th><th>文號</th><th>主旨</th><th>收創日期</th><th>二展期限</th><th>結案日期</th><th>剩餘天數</th></tr>
         </thead>
         <tbody id="openDocList"></tbody>
     </table>
@@ -175,7 +184,7 @@
     <h3 id="closedSectionTitle" class="clickable-header" onclick="toggleClosedSection()" title="點擊展開/收合">🗄️ 已結案公文 ▶</h3>
     <table id="closedTable" style="display: none;">
         <thead>
-            <tr><th>操作</th><th>狀態</th><th>文號</th><th>主旨</th><th>收創日期</th><th>二展期限</th><th>結案日期</th><th>剩餘天數</th></tr>
+            <tr><th>操作</th><th>狀態</th><th>承辦人</th><th>文號</th><th>主旨</th><th>收創日期</th><th>二展期限</th><th>結案日期</th><th>剩餘天數</th></tr>
         </thead>
         <tbody id="closedDocList"></tbody>
     </table>
@@ -189,7 +198,7 @@
         // ==========================================
         // 【請務必填入 重新部署後 的 API 網址】
         // ==========================================
-        const API_URL = "https://script.google.com/macros/s/AKfycbzPURrbEL2QDTvtpTYsN0b2q0wPMpwoxUX12s-4VEH8dnwH4h6GH8YbG8jDbJVXlmx2ag/exec"; 
+        const API_URL = "https://script.google.com/macros/s/AKfycbxOZO_hY8SwiJcSqX09pSNbr2ayil61OqyYoXWT1NQ-6H6oTCP_Di-cXdYQMUk0EZ01Vw/exec"; 
         
         let allDocs = []; 
         let isClosedSectionExpanded = false;
@@ -313,13 +322,16 @@
                 alert("請先完成或取消目前的修改操作。");
                 return;
             }
+            // V1.19 新增: 取得承辦人欄位
+            const undertaker = document.getElementById('undertaker').value.trim();
             const subject = document.getElementById('subject').value.trim();
             const docNo = document.getElementById('docNo').value.trim();
             const rawCreateDate = document.getElementById('createDate').value.trim();
             const rawDeadline = document.getElementById('deadline').value.trim();
 
-            if (!subject || !docNo || !rawCreateDate || !rawDeadline) {
-                alert('所有欄位皆為必填。'); return;
+            // V1.19 修改: 驗證承辦人
+            if (!undertaker || !subject || !docNo || !rawCreateDate || !rawDeadline) {
+                alert('所有欄位(包含承辦人)皆為必填。'); return;
             }
             const isoCreateDate = rocToIso(rawCreateDate);
             const isoDeadline = rocToIso(rawDeadline);
@@ -337,6 +349,7 @@
                 body: JSON.stringify({
                     action: 'add',
                     id: Date.now(),
+                    undertaker: undertaker, // V1.19 傳送承辦人
                     subject: subject,
                     docNo: docNo,
                     createDate: isoCreateDate,
@@ -357,12 +370,14 @@
         }
 
         function confirmUpdate(id) {
+            // V1.19 新增: 取得編輯中的承辦人
+            const undertaker = document.getElementById('edit_undertaker_' + id).value.trim();
             const subject = document.getElementById('edit_subject_' + id).value.trim();
             const docNo = document.getElementById('edit_docNo_' + id).value.trim();
             const rawCreateDate = document.getElementById('edit_create_' + id).value.trim();
             const rawDeadline = document.getElementById('edit_deadline_' + id).value.trim();
 
-            if (!subject || !docNo || !rawCreateDate || !rawDeadline) {
+            if (!undertaker || !subject || !docNo || !rawCreateDate || !rawDeadline) {
                 alert('所有欄位皆為必填。'); return;
             }
             const isoCreateDate = rocToIso(rawCreateDate);
@@ -378,6 +393,7 @@
                 body: JSON.stringify({
                     action: 'edit',
                     id: id,
+                    undertaker: undertaker, // V1.19
                     subject: subject,
                     docNo: docNo,
                     createDate: isoCreateDate,
@@ -440,7 +456,6 @@
                 if (!isoDate) { alert('日期格式錯誤 (例:1140101)'); return; }
             } else {
                 if(!confirm("確定要將此案恢復為「辦理中」狀態嗎？")) return;
-                // 空字串會被送出，後端將清空該欄位
             }
 
             toggleLoading(true);
@@ -451,7 +466,7 @@
             .then(res => res.json())
             .then(result => {
                 if(result.status === "success") {
-                    fetchData(); // 重新讀取，若 closeDate 為空，會自動分類到列管區
+                    fetchData(); 
                 } else {
                     alert("更新失敗：" + result.message);
                 }
@@ -481,7 +496,6 @@
             
             const today = new Date(); today.setHours(0,0,0,0);
             
-            // 重要：這裡的 filter 會確保如果 closeDate 是空字串，它會回到 openDocs
             let openDocs = allDocs.filter(d => !d.closeDate);
             let closedDocs = allDocs.filter(d => d.closeDate);
 
@@ -516,6 +530,7 @@
 
             if (isEditing) {
                 tr.style.backgroundColor = "#e8f0fe"; 
+                // V1.19 修改: 編輯模式增加承辦人輸入框
                 tr.innerHTML = `
                     <td>
                         <div class="action-btns">
@@ -524,6 +539,7 @@
                         </div>
                     </td>
                     <td>編輯中</td>
+                    <td><input type="text" class="edit-input" id="edit_undertaker_${doc.id}" value="${doc.undertaker || ''}"></td>
                     <td><input type="text" class="edit-input" id="edit_docNo_${doc.id}" value="${doc.docNo}"></td>
                     <td><input type="text" class="edit-input" id="edit_subject_${doc.id}" value="${doc.subject}"></td>
                     <td><input type="text" class="edit-input" id="edit_create_${doc.id}" value="${displayROC(doc.createDate)}" oninput="calculateDeadlineForEdit('${doc.id}')"></td>
@@ -536,6 +552,7 @@
                 const btnText = isClosed ? '修改' : '確認';
                 const dateValue = isClosed ? displayROC(doc.closeDate) : '';
 
+                // V1.19 修改: 顯示承辦人資料
                 tr.innerHTML = `
                     <td>
                         <div class="action-btns">
@@ -544,6 +561,7 @@
                         </div>
                     </td>
                     <td>${statusHtml}</td>
+                    <td>${doc.undertaker || ''}</td>
                     <td>${doc.docNo}</td>
                     <td><div class="subject-content" onclick="toggleSubject(this)">${doc.subject}</div></td>
                     <td>${displayROC(doc.createDate)}</td>
